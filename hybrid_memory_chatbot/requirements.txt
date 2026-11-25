@@ -1,0 +1,23 @@
+streamlit
+
+psycopg
+
+tiktoken
+
+# Pydantic
+pydantic-settings==2.16.2
+python-dotenv==1.2.4
+
+# Tests (used from milestone M6)
+pytest==9.2.0
+
+# Qdrant
+langchain-qdrant==1.1.0
+qdrant-client==1.20.0
+
+# Google Gemini Embedding API
+google-genai==3.3.0
+
+# Athentication Database
+sqlalchemy>=2.0,<3.0
+psycopg[binary]==3.3.9
