@@ -20,7 +20,7 @@ load_dotenv()
 
 # 1. Initialize LLM
 llm = ChatGroq(
-    model="your-supported-groq-model",
+    model="openai/gpt-oss-20b",
     temperature=0
 )
 
