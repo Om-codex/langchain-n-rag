@@ -1,48 +1,71 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+"""Database engine, session factory and table initialization.
 
-from config import settings
+Supports PostgreSQL (psycopg v3) and SQLite (useful for quick local tests).
+"""
+
 from pathlib import Path
 
-# Database URL
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+# Load env files before config.py builds its global Settings object.
+# The package-level .env wins over the repository-root .env.
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+_PACKAGE_DIR = Path(__file__).resolve().parent
+
+load_dotenv(_ROOT_DIR / ".env")
+load_dotenv(_PACKAGE_DIR / ".env", override=True)
+
+from config import settings  # noqa: E402
+
 DATABASE_URL = settings.database_url
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 
-# SQLite-specific configuration
-connect_args = ()
+_connect_args = {"check_same_thread": False} if _is_sqlite else {}
 
-if DATABASE_URL.startswith("sqlite"):
-  connect_args = {"check_same_thread": False}
+if _is_sqlite:
+    _sqlite_path = Path(make_url(DATABASE_URL).database or "")
+    if str(_sqlite_path) not in {"", ":memory:"}:
+        _sqlite_path.parent.mkdir(parents=True, exist_ok=True)
 
-  # Create the database directory if it doesn't exists
-
-  db_path = Path(DATABASE_URL.replace("sqlite:///","",1))
-  db_path.parent.mkdir(parents=True, exist_ok = True)
-
-  # create the database engine
-  engine = create_engine(
+engine = create_engine(
     DATABASE_URL,
-    connect_args=connect_args,
+    connect_args=_connect_args,
     pool_pre_ping=True,
-  )
+)
 
-  # Database session factory
-  SessionLocal = sessionmaker(
+
+class Base(DeclarativeBase):
+    """Declarative base shared by all ORM models."""
+
+
+SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
-    autocommit=False
-  )
+    autocommit=False,
+    expire_on_commit=False,
+)
 
-  # Base class for all database models
-  class Base(DeclarativeBase):
-    pass
+# chains/chatbot.py imports this name.
+SessionFactory = SessionLocal
 
-  def get_db():
+
+def init_db() -> None:
+    """Create missing tables.
+
+    Importing the models registers them on ``Base`` before create_all runs.
     """
-    Provides a database session for each request."""
+    from db.models import ChatMessage, ChatSession  # noqa: F401
 
+    Base.metadata.create_all(bind=engine)
+
+
+def get_db():
+    """Yield a DB session and always close it."""
     db = SessionLocal()
-
     try:
-      yield db
+        yield db
     finally:
-      db.close()
+        db.close()
