@@ -1,0 +1,48 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+from config import settings
+from pathlib import Path
+
+# Database URL
+DATABASE_URL = settings.database_url
+
+# SQLite-specific configuration
+connect_args = ()
+
+if DATABASE_URL.startswith("sqlite"):
+  connect_args = {"check_same_thread": False}
+
+  # Create the database directory if it doesn't exists
+
+  db_path = Path(DATABASE_URL.replace("sqlite:///","",1))
+  db_path.parent.mkdir(parents=True, exist_ok = True)
+
+  # create the database engine
+  engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+  )
+
+  # Database session factory
+  SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False
+  )
+
+  # Base class for all database models
+  class Base(DeclarativeBase):
+    pass
+
+  def get_db():
+    """
+    Provides a database session for each request."""
+
+    db = SessionLocal()
+
+    try:
+      yield db
+    finally:
+      db.close()
