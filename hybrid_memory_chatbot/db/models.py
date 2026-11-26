@@ -4,7 +4,7 @@ from sqlalchemy import (
   String, Integer, DateTime, Text, ForeignKey
 )
 from sqlalchemy.orm import Mapped, mapped_column
-from database.connection import Base
+from db.connection import Base
 
 class ChatSession(Base):
 
