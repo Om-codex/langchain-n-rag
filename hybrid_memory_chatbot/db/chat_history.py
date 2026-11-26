@@ -21,7 +21,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
   @property
   def messages(self)->list[BaseMessage]:
     with self.SessionFactory() as db:
-      rows = db.scalar(
+      rows = db.scalars(
         select(ChatMessage)
         .where(ChatMessage.session_id == self.session_id)
         .order_by(ChatMessage.id.asc())
